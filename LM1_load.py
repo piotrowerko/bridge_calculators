@@ -16,10 +16,7 @@ class Lm1:
     
     def __str__(self):
         return f'{self.name}'
-    
-    def data_query(self):
-        pass
-    
+      
     def compute_total_reactions(self):
         n, w1, l = self.compute_LM1_layout()
         active_spans = list(self.active_spans)
