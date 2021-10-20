@@ -27,7 +27,7 @@ class PrzekrProst():
         return data
     
     def _get_fcd(self, file_path='concrete_ec.csv'):
-        conc_data = self._load_concrete(file_path='concerete_ec.csv')
+        conc_data = self._load_concrete(file_path='concrete_ec.csv')
         conc_class_names = [el[0] for el in conc_data]
         class_ind = conc_class_names.index(self.cl_conc)
         return float(conc_data[class_ind][3])
