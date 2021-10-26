@@ -77,7 +77,7 @@ def main():
                                 fi=25, # [mm]
                                 fi_s=12, # [mm]
                                 fi_opp=25, # [mm]
-                                m_sd=11000) # [kNm]
+                                m_sd=6000) # [kNm]
     res = my_rc_cross_sec.compute_reinf()
     print(f'bottom needs: {res[1]} x fi{my_rc_cross_sec.fi} >= {res[0]}')
     print(f'upper needs: {res[3]} x fi{my_rc_cross_sec.fi} >= {res[2]}')
