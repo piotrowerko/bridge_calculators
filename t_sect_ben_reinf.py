@@ -31,7 +31,7 @@ class TCrReinf(RectCrReinf):
         f_cd = self._get_fcd()
         d = self._compute_d()
         c = 2 * 0.001 * (self.m_sd - m_rd_1) / (self.b * d ** 2 * f_cd)
-        return RectCrReinf._equationroots(b=-2, c=c, a=1)
+        return RectCrReinf._equationroots(_b=-2, c=c, a=1)
 
     def compute_reinf_T(self):
         m_rd, beta, d, f_cd = self._compute_mrd_sl()
@@ -43,11 +43,12 @@ class TCrReinf(RectCrReinf):
             a_s11 = beta * d * (self.beff - self.b) * f_cd / f_yd
             # computes load capasity of uuper slab without web [kNm]:
             m_rd_1 = 1000 * beta * (1 - 0.5 * beta) * d ** 2 * (self.beff - self.b) * f_cd
+            print(f'Mrd1: {m_rd_1}')
             ksi_eff_two = self._compute_ksi_eff_reinf_T(m_rd_1)
             print(f'ksi eff roots: {ksi_eff_two}')
             ksi_eff = min(ksi_eff_two)
             if ksi_eff <= ksi_eff_lim:
-                print('only the As1 reinforcement is sufficient')
+                print(f'only the As1 reinforcement is sufficient {ksi_eff}, {ksi_eff_lim}')
                 a_s12 = ksi_eff * d * self.b * f_cd / f_yd
                 a_s2 = 0
                 a_s1 = a_s11 + a_s12
