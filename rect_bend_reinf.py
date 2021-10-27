@@ -38,10 +38,12 @@ class RectCrReinf(RectCrSectDoubleR):
         # f_yd = self.cl_steel_data[1]
         f_cd = self._get_fcd()
         d = self._compute_d()
-        c = 2 * (self.m_sd * 0.001) / (self.b * d ** 2 * f_cd)
+        c = 2 * (self.m_sd * 0.001) / (self.b * d ** 2 * f_cd)  # "c" here is NOT concrete cover
         return RectCrReinf._equationroots(b=-2, c=c, a=1)
 
-    def compute_reinf(self):
+    def compute_reinf_rect(self, b=None):
+        if b == None:
+            b = self.b
         d = self._compute_d()
         f_cd = self._get_fcd()
         f_yd = self.cl_steel_data[1]
@@ -49,12 +51,12 @@ class RectCrReinf(RectCrSectDoubleR):
         a2 = self._compute_a2()
         ksi_eff_two = self._compute_ksi_eff_reinf()
         print(f'ksi eff roots: {ksi_eff_two}')
-        ksi_eff = min(self._compute_ksi_eff_reinf())
+        ksi_eff = min(ksi_eff_two)
         print(ksi_eff)
         if ksi_eff > ksi_eff_lim:
             print('As2 reinforcement is necessary')
             ksi_eff = ksi_eff_lim  # = ksi_eff_lim
-            m_rd_star = 1000 * ksi_eff * (1 - 0.5 * ksi_eff) * d ** 2 * self.b * f_cd
+            m_rd_star = 1000 * ksi_eff * (1 - 0.5 * ksi_eff) * d ** 2 * b * f_cd
             delta_m = self.m_sd - m_rd_star
             a_s1_star = ksi_eff_lim * d * self.b * f_cd / f_yd
             a_s2 = (delta_m / 1000) / (f_yd * (d - a2))  # = As1 star star
@@ -77,8 +79,8 @@ def main():
                                 fi=25, # [mm]
                                 fi_s=12, # [mm]
                                 fi_opp=25, # [mm]
-                                m_sd=6000) # [kNm]
-    res = my_rc_cross_sec.compute_reinf()
+                                m_sd=11000) # [kNm]
+    res = my_rc_cross_sec.compute_reinf_rect()
     print(f'bottom needs: {res[1]} x fi{my_rc_cross_sec.fi} >= {res[0]}')
     print(f'upper needs: {res[3]} x fi{my_rc_cross_sec.fi} >= {res[2]}')
 
