@@ -36,7 +36,7 @@ class RectCrReinf(RectCrSectDoubleR):
     def _compute_ksi_eff_reinf(self, b=None):
         if b == None:
             b = self.b
-        f_cd = self._get_fcd()
+        f_cd = self._get_fcd_eta()
         d = self._compute_d()
         c = 2 * (self.m_sd * 0.001) / (b * d ** 2 * f_cd)  # "c" here is NOT concrete cover
         return RectCrReinf._equationroots(_b=-2, c=c, a=1)
@@ -45,9 +45,9 @@ class RectCrReinf(RectCrSectDoubleR):
         if b == None:
             b = self.b
         d = self._compute_d()
-        f_cd = self._get_fcd()
+        f_cd = self._get_fcd_eta()
         f_yd = self.cl_steel_data[1]
-        ksi_eff_lim = self.cl_steel_data[3]
+        ksi_eff_lim = self.cl_steel_data[3] # ksi_eff_lim assuming LAMBDA = 0.8 and EPSILON CU = 3.5 * (10 ** -3)
         a2 = self._compute_a2()
         ksi_eff_two = self._compute_ksi_eff_reinf(b)
         print(f'ksi eff roots: {ksi_eff_two}')

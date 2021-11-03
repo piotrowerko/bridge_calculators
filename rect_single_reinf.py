@@ -26,11 +26,18 @@ class RectCrSectSingle():
             data = list(map(list, zip(*_data)))
         return data
     
-    def _get_fcd(self, file_path='concrete_ec.csv'):
+    def _get_fcd_eta(self):
+        """returns f_cd * eta value according to EC"""
         conc_data = self._load_concrete(file_path='concrete_ec.csv')
         conc_class_names = [el[0] for el in conc_data]
         class_ind = conc_class_names.index(self.cl_conc)
-        return float(conc_data[class_ind][3])
+        fck = float(conc_data[class_ind][1])
+        fcd = float(conc_data[class_ind][3])
+        if fck <= 50:
+            eta = 1.0  # effective compressive strength coefficient
+        else:
+            eta = 1.0 - (fck - 50) / 200
+        return eta * fcd
     
     def _compute_a1(self):
         """returns a1 value assuming one row of reinf"""
@@ -48,7 +55,7 @@ class RectCrSectSingle():
     def _compute_ksi_eff_single_r(self):
         a_s1 = self._compute_a_s1()
         f_yd = self.cl_steel_data[1]
-        f_cd = self._get_fcd()
+        f_cd = self._get_fcd_eta()
         nominator = a_s1 * f_yd
         denominator = self.b * self._compute_d() * f_cd
         return nominator / denominator
@@ -56,8 +63,8 @@ class RectCrSectSingle():
     def compute_m_rd_single_r(self):
         ksi_eff = self._compute_ksi_eff_single_r()
         d = self._compute_d()
-        f_cd = self._get_fcd()
-        if ksi_eff <= self.cl_steel_data[3]:
+        f_cd = self._get_fcd_eta()
+        if ksi_eff <= self.cl_steel_data[3]:  # ksi_eff_lim assuming LAMBDA = 0.8 and EPSILON CU = 3.5 * (10 ** -3)
             print("reinforcement is fully used; sigma_s = f_yd")
             m_rd = 1000 * ksi_eff * (1 - 0.5 * ksi_eff) * d ** 2 * self.b * f_cd
             return m_rd, ksi_eff
@@ -69,7 +76,7 @@ class RectCrSectSingle():
         
     
 def main():
-    moj_przekr_prost = RectCrSect(name='moj_przekr_prost',
+    moj_przekr_prost = RectCrSectSingle(name='moj_przekr_prost',
                                    b=0.5,
                                    h=1.5,
                                    cl_conc='C30_37',

@@ -23,7 +23,7 @@ class RectCrSectDoubleR(RectCrSectSingle):
         a_s1 = self._compute_a_s1()
         a_s2 = self._compute_a_s2()
         f_yd = self.cl_steel_data[1]
-        f_cd = self._get_fcd()
+        f_cd = self._get_fcd_eta()
         nominator = a_s1 * f_yd - a_s2 * f_yd
         denominator = self.b * self._compute_d() * f_cd
         return nominator / denominator, a_s1, a_s2
@@ -31,7 +31,7 @@ class RectCrSectDoubleR(RectCrSectSingle):
     def compute_m_rd_double_r(self):
         ksi_eff, a_s1, a_s2 = self._compute_ksi_eff_double_r()
         d = self._compute_d()
-        f_cd = self._get_fcd()
+        f_cd = self._get_fcd_eta()
         a2 = self._compute_a2()
         if ksi_eff <= self.cl_steel_data[3]:
             print("reinforcement is fully used; sigma_s = f_yd")
@@ -46,7 +46,7 @@ class RectCrSectDoubleR(RectCrSectSingle):
                 return m_rd, ksi_eff
         else:
             print("reinforcement is NOT fully used; sigma_s < f_yd")
-            ksi_eff = self.cl_steel_data[3]  # = ksi_eff_lim
+            ksi_eff = self.cl_steel_data[3]  # # ksi_eff_lim assuming LAMBDA = 0.8 and EPSILON CU = 3.5 * (10 ** -3)
             m_rd = 1000 * ksi_eff * (1 - 0.5 * ksi_eff) * d ** 2 * self.b * f_cd
             return m_rd, ksi_eff
     

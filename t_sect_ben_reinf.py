@@ -21,14 +21,14 @@ class TCrReinf(RectCrReinf):
     def _compute_mrd_sl(self):
         """returns load capasity of upper slab Mrd [kNm]"""
         beta, d = self._compute_beta()
-        f_cd = self._get_fcd()
+        f_cd = self._get_fcd_eta()
         m_rd = 1000 * beta * (1 - 0.5 * beta) * d ** 2 * self.beff * f_cd
         return m_rd, beta, d, f_cd
 
     def _compute_ksi_eff_reinf_T(self, m_rd_1):
         # a_s1 = self._compute_a_s1()
         # f_yd = self.cl_steel_data[1]
-        f_cd = self._get_fcd()
+        f_cd = self._get_fcd_eta()
         d = self._compute_d()
         c = 2 * 0.001 * (self.m_sd - m_rd_1) / (self.b * d ** 2 * f_cd)
         return RectCrReinf._equationroots(_b=-2, c=c, a=1)
@@ -36,7 +36,7 @@ class TCrReinf(RectCrReinf):
     def compute_reinf_T(self):
         m_rd, beta, d, f_cd = self._compute_mrd_sl()
         f_yd = self.cl_steel_data[1]
-        ksi_eff_lim = self.cl_steel_data[3]
+        ksi_eff_lim = self.cl_steel_data[3]  # ksi_eff_lim assuming LAMBDA = 0.8 and EPSILON CU = 3.5 * (10 ** -3)
         a2 = self._compute_a2()
         if m_rd < self.m_sd:  # the compression zone extends below the plate
             print('the compression zone extends below the plate')
