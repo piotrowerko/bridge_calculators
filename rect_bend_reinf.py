@@ -22,8 +22,8 @@ class RectCrReinf(RectCrSectDoubleR):
         sqrt_val = math.sqrt(abs(dis)) 
         # checking condition for discriminant
         if dis > 0:  # real and different roots 
-            r1 = (-_b + sqrt_val)/(2 * a)
-            r2 = (-_b - sqrt_val)/(2 * a)
+            r1 = (-_b + sqrt_val) / (2 * a)
+            r2 = (-_b - sqrt_val) / (2 * a)
         elif dis == 0:  # real and same roots
             r1 = -_b / (2 * a)
             r2 = None

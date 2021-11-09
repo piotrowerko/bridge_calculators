@@ -74,7 +74,7 @@ def main():
                                 b=0.5, # [m]
                                 h=1.5, # [m]
                                 hsl=0.20, #[m] thickness of upper slab
-                                beff=1.2, #[m] effective width od upper slab
+                                beff=1.2, #[m] effective width of upper slab
                                 cl_conc='C30_37',
                                 cl_steel='bst500s',
                                 c=30, # [mm]
