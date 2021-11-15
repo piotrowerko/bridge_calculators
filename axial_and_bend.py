@@ -25,7 +25,11 @@ class GeneralAxBend(TCrReinf):
     _R = 20  # curve parameter (FOR BOTH B500SP AND BST500S STEEL ?)
     E_STELL = 200 * 10 ** 3  # acc. to [2]
 
-    def __init__(self, name, b, h, hsl, beff, cl_conc, cl_steel, c, fi, fi_s, fi_opp, m_sd, n_sd):
+    def __init__(self, name, b, h, hsl, 
+                 beff, cl_conc, cl_steel, 
+                 c, fi, fi_s, fi_opp, 
+                 nl_reinf_top, nl_reinf_bottom,
+                 m_sd, n_sd):
         super().__init__(name, b, h, hsl, beff, cl_conc, cl_steel, c, fi, fi_s, fi_opp, m_sd)
         self.n_sd = n_sd
         char_geom = CharGeom()
@@ -38,6 +42,13 @@ class GeneralAxBend(TCrReinf):
         class_ind = conc_class_names.index(self.cl_conc)
         E_cm = float(conc_data[class_ind][9])
         return E_cm
+    
+    def _compute_reinf_heights(self):
+        layer_one = self.c + self.fi_s + self.fi * 0.5
+        reinf_heights = (0.001 * layer_one, 
+                         0.001 * (layer_one + 2 * self.fi),
+                         0.001 * (layer_one + 4 * self.fi))
+        return reinf_heights
 
     def _stress_strain_conc(self, strain_conc=0.0):
         """returns stress-strain relationsip in cocnrete"""
@@ -71,7 +82,7 @@ class GeneralAxBend(TCrReinf):
         # WARINING: doubling of stresses in the reinforcement surrounded 
         # by concrete in compression was not taken into account!!
         return sigma_steel, e_ud
-    
+
     def _find_strains_in_steel(self, eps_cur=0.0, fi_cur=0.0):
         """finds strain in steel layers basing on rotation and delta_l"""
         # ROTACJA TAKA ŻEBY DAŁA  JEDNĄ SETNĄ PROMILA W SKARJNYCH WŁÓKNACH
@@ -115,12 +126,14 @@ def main():
                                 fi=25, # [mm]
                                 fi_s=12, # [mm]
                                 fi_opp=25, # [mm]
+                                nl_reinf_top=3, # [mm] 
+                                nl_reinf_bottom=3, # [mm]
                                 m_sd=11000, # [kNm]
                                 n_sd=2000) # [kN]
     print(my_rc_cross_sec._stress_strain_conc(strain_conc=0.0040))
     print(my_rc_cross_sec._stress_strain_steel(0.07))
     print(my_rc_cross_sec.e_vert)
-
+    print(my_rc_cross_sec._compute_reinf_heights())
 
 if __name__ == '__main__':
     main()
