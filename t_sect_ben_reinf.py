@@ -11,9 +11,6 @@ class TCrReinf(RectCrReinf):
         self.hsl = hsl
         self.beff = beff
 
-    def __str__(self):
-        return f'{self.name}'
-
     def _compute_beta(self):
         d = self._compute_d()
         return self.hsl / d, d

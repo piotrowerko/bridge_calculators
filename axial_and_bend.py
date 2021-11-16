@@ -24,6 +24,7 @@ class GeneralAxBend(TCrReinf):
     EYD = 0.00217  # max. steel strain (FOR BOTH B500SP AND BST500S STEEL)
     _R = 20  # curve parameter (FOR BOTH B500SP AND BST500S STEEL ?)
     E_STELL = 200 * 10 ** 3  # acc. to [2]
+    EPS_INIT = 0.01 * 10 ** -3
 
     def __init__(self, name, b, h, hsl, 
                  beff, cl_conc, cl_steel, 
@@ -33,22 +34,44 @@ class GeneralAxBend(TCrReinf):
         super().__init__(name, b, h, hsl, beff, cl_conc, cl_steel, c, fi, fi_s, fi_opp, m_sd)
         self.n_sd = n_sd
         char_geom = CharGeom()
-        self.e_vert = char_geom.find_center_m((b[0], h[0], b[1], h[1], b[2], h[2]))
-
-    def _get_E_cm(self):
+        self.e_vert = char_geom.find_center_m((b[0], h[0], b[1], h[1], b[2], h[2]))  # = sefl.h_bottom
+        self.h_top = sum(self.h) - self.e_vert
+        self.nl_reinf_top = nl_reinf_top
+        self.nl_reinf_bottom = nl_reinf_bottom
+        
+    @property
+    def E_cm(self):
         """returns E_cm value according to EC"""
         conc_data = self._load_concrete(file_path='concrete_ec.csv')
         conc_class_names = [el[0] for el in conc_data]
         class_ind = conc_class_names.index(self.cl_conc)
-        E_cm = float(conc_data[class_ind][9])
-        return E_cm
+        self._E_cm = float(conc_data[class_ind][9])
+        return self._E_cm  # kluczowe pytanie - czym się różni atrybut od właściwości klasy (odp: wła. ma setter i deleter)
     
-    def _compute_reinf_heights(self):
+    def _reinf_heights(self):
         layer_one = self.c + self.fi_s + self.fi * 0.5
         reinf_heights = (0.001 * layer_one, 
                          0.001 * (layer_one + 2 * self.fi),
                          0.001 * (layer_one + 4 * self.fi))
         return reinf_heights
+    
+    def _initial_rotation(self):
+        # ROTACJA TAKA ŻEBY DAŁA  JEDNĄ SETNĄ PROMILA W SKARJNYCH WŁÓKNACH
+        fi_init = GeneralAxBend.EPS_INIT / max(self.e_vert, self.h_top)
+        return fi_init
+    
+    def _strains_in_steel(self, eps_cur=0.0, fi_cur=0.0):
+        """finds strain in steel layers basing on rotation and eps_linear"""
+        r_heights = self._reinf_heights()
+        strain_steel = [0] * 6
+        # if self.nl_reinf_top == 3:
+        #     strain_steel[0] = ((self.h_top - r_heights[0]) * fi_cur)
+        #     strain_steel[1] = ((self.h_top - r_heights[1]) * fi_cur)
+        for i in range(self.nl_reinf_top):
+            strain_steel[i] = - ((self.h_top - r_heights[i]) * fi_cur)
+        for i in range(3, 3 + self.nl_reinf_bottom, 1):
+            strain_steel[i] = ((self.h_top - r_heights[-i+2]) * fi_cur)
+        return strain_steel
 
     def _stress_strain_conc(self, strain_conc=0.0):
         """returns stress-strain relationsip in cocnrete"""
@@ -82,12 +105,8 @@ class GeneralAxBend(TCrReinf):
         # WARINING: doubling of stresses in the reinforcement surrounded 
         # by concrete in compression was not taken into account!!
         return sigma_steel, e_ud
+    
 
-    def _find_strains_in_steel(self, eps_cur=0.0, fi_cur=0.0):
-        """finds strain in steel layers basing on rotation and delta_l"""
-        # ROTACJA TAKA ŻEBY DAŁA  JEDNĄ SETNĄ PROMILA W SKARJNYCH WŁÓKNACH
-        # SKROT ROWNOMIERNY JEDNA SETNA RADIANA
-        return strain_steel
 
     def _find_n_eps_m_eps_fi(self, eps_cur=0.0, fi_cur=0.0):
         """finds corresponding quantities of M N with regard to input
@@ -116,8 +135,8 @@ class GeneralAxBend(TCrReinf):
 
 def main():
     my_rc_cross_sec = GeneralAxBend(name='GENERAL_CROSS-SECT_no1',
-                                b=(3, 1.5, 4), # [m]
-                                h=(1.5, 2.5, 2.5), # [m]
+                                b=(3, 1.5, 4), # [m] width of the individual rectangles
+                                h=(1.5, 2.5, 2.5), # [m] height of the individual rectangles
                                 hsl=0.20, #[m] thickness of upper slab
                                 beff=1.2, #[m] effective width of upper slab
                                 cl_conc='C30_37',
@@ -126,14 +145,17 @@ def main():
                                 fi=25, # [mm]
                                 fi_s=12, # [mm]
                                 fi_opp=25, # [mm]
-                                nl_reinf_top=3, # [mm] 
-                                nl_reinf_bottom=3, # [mm]
+                                nl_reinf_top=3, # [mm] denotes number of layers of top reinforcement
+                                nl_reinf_bottom=3, # [mm] denotes number of layers of bottom reinforcement
                                 m_sd=11000, # [kNm]
                                 n_sd=2000) # [kN]
     print(my_rc_cross_sec._stress_strain_conc(strain_conc=0.0040))
     print(my_rc_cross_sec._stress_strain_steel(0.07))
     print(my_rc_cross_sec.e_vert)
-    print(my_rc_cross_sec._compute_reinf_heights())
-
+    print(my_rc_cross_sec._reinf_heights())
+    print(my_rc_cross_sec.h_top)
+    print(my_rc_cross_sec.E_cm)
+    print(my_rc_cross_sec._initial_rotation())
+    print(my_rc_cross_sec._strains_in_steel(eps_cur=0.0, fi_cur=GeneralAxBend.EPS_INIT))
 if __name__ == '__main__':
     main()
