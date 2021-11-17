@@ -9,4 +9,11 @@ A = np.array([[4, 3, 2], [-2, 2, 3], [3, -5, 2]])
 B = np.array([25, -10, -4])
 X = np.linalg.inv(A).dot(B)
 
-print(X)
+z = [0,0,0]
+y = z + [1]
+
+
+b = (3, 1.5, 4)
+h = (1.5, 2.5, 2.5)
+
+print(sum(h))

@@ -1,9 +1,9 @@
 """
 sources of knoweladge
-pietryga [1]
-https://chodor-projekt.net/encyclopedia/krzywe-interakcji-m-n-zelbetu/ [2]
 knauf
 łapko jensen
+pietryga
+https://chodor-projekt.net/encyclopedia/krzywe-interakcji-m-n-zelbetu/
 oleszek
 """
 
@@ -25,6 +25,9 @@ class GeneralAxBend(TCrReinf):
     _R = 20  # curve parameter (FOR BOTH B500SP AND BST500S STEEL ?)
     E_STELL = 200 * 10 ** 3  # acc. to [2]
     EPS_INIT = 0.01 * 10 ** -3
+    N_CONC_LAYERS = 10  # number of layers of virtual division of the concrete cross-section for the needs of numerical integrals
+    CONC_L_THIC = 0.5 # concrete layer thickness of virtual division of the concrete cross-section for the needs of numerical integrals
+    
 
     def __init__(self, name, b, h, hsl, 
                  beff, cl_conc, cl_steel, 
@@ -64,14 +67,48 @@ class GeneralAxBend(TCrReinf):
         """finds strain in steel layers basing on rotation and eps_linear"""
         r_heights = self._reinf_heights()
         strain_steel = [0] * 6
-        # if self.nl_reinf_top == 3:
-        #     strain_steel[0] = ((self.h_top - r_heights[0]) * fi_cur)
-        #     strain_steel[1] = ((self.h_top - r_heights[1]) * fi_cur)
         for i in range(self.nl_reinf_top):
-            strain_steel[i] = - ((self.h_top - r_heights[i]) * fi_cur)
+            strain_steel[i] = ((self.h_top - r_heights[i]) * fi_cur) + eps_cur
         for i in range(3, 3 + self.nl_reinf_bottom, 1):
-            strain_steel[i] = ((self.h_top - r_heights[-i+2]) * fi_cur)
+            strain_steel[i] = - ((self.e_vert - r_heights[-i+2]) * fi_cur) + eps_cur
         return strain_steel
+    
+    def _conc_layers(self):
+        """finds heights and number of layers of virtual division in the concrete cross-section"""
+        n_layers = int(sum(self.h) / GeneralAxBend.CONC_L_THIC)
+        conc_lay_heights = []
+        for i in range(n_layers):
+            curr_rel_height = self.h_top - (0.5 + i) * GeneralAxBend.CONC_L_THIC
+            conc_lay_heights.append(curr_rel_height)
+        return n_layers, conc_lay_heights
+    
+    def _strains_in_conc(self, eps_cur=0.0, fi_cur=0.0):
+        """finds strain in concrete layers basing on rotation and eps_linear"""
+        n_layers, conc_lay_heights = self._conc_layers()
+        strain_conc = [(conc_lay_heights[i] * fi_cur + eps_cur) for i in range(n_layers)]
+        return strain_conc
+            
+    def _stress_in_conc(self, eps_cur=0.0, fi_cur=0.0):
+        """returns stresses in concrete layers"""
+        strain_conc = self._strains_in_conc(eps_cur, fi_cur)
+        stress_conc = [self._stress_strain_conc(el) for el in strain_conc]
+        return stress_conc
+    
+    def _stress_in_steel(self, eps_cur=0.0, fi_cur=0.0):
+        """returns stresses in reinforcement layers"""
+        strain_steel = self._strains_in_steel(eps_cur, fi_cur)
+        stress_steel = [self._stress_strain_steel(el)[0] for el in strain_steel]
+        return stress_steel
+    
+    def CAŁKA_NUMERYCZNA_POD_MOMENT(SELF):
+        # suma pole_plastra*naprezenieplastra*odlegloscdoSRC
+        # suma pole_warw_pretow*naprezenia_w_wawie-pretow*odlegl_doSRC
+        pass
+    
+    def CAŁKA_NUMERYCZNA_POD_sile(SELF):
+        # suma pole_plastra*naprezenieplastra
+        # suma pole_warw_pretow*naprezenia_w_wawie-pretow
+        pass
 
     def _stress_strain_conc(self, strain_conc=0.0):
         """returns stress-strain relationsip in cocnrete"""
@@ -135,8 +172,8 @@ class GeneralAxBend(TCrReinf):
 
 def main():
     my_rc_cross_sec = GeneralAxBend(name='GENERAL_CROSS-SECT_no1',
-                                b=(3, 1.5, 4), # [m] width of the individual rectangles
-                                h=(1.5, 2.5, 2.5), # [m] height of the individual rectangles
+                                b=(4, 1, 4), # [m] width of the individual rectangles
+                                h=(1, 4, 1), # [m] height of the individual rectangles
                                 hsl=0.20, #[m] thickness of upper slab
                                 beff=1.2, #[m] effective width of upper slab
                                 cl_conc='C30_37',
@@ -155,7 +192,12 @@ def main():
     print(my_rc_cross_sec._reinf_heights())
     print(my_rc_cross_sec.h_top)
     print(my_rc_cross_sec.E_cm)
-    print(my_rc_cross_sec._initial_rotation())
-    print(my_rc_cross_sec._strains_in_steel(eps_cur=0.0, fi_cur=GeneralAxBend.EPS_INIT))
+    init_fi = my_rc_cross_sec._initial_rotation()
+    print(init_fi)
+    print(my_rc_cross_sec._strains_in_steel(eps_cur=0.000001, fi_cur=init_fi))
+    print(my_rc_cross_sec._conc_layers())
+    print(my_rc_cross_sec._strains_in_conc(eps_cur=0.000001, fi_cur=init_fi))
+    print(my_rc_cross_sec._stress_in_conc(eps_cur=0.000001, fi_cur=init_fi))
+    print(my_rc_cross_sec._stress_in_steel(eps_cur=0.000001, fi_cur=init_fi))
 if __name__ == '__main__':
     main()
