@@ -113,6 +113,7 @@ virt_srod_pio1/
 venv_signal_aspekt/
 .virt_srod_pio1
 .venv_signal_aspekt
+virt_env_pio1/
 
 # Spyder project settings
 .spyderproject

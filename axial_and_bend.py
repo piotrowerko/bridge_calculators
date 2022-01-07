@@ -10,6 +10,8 @@ oleszek
 import csv
 import math
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
 from t_sect_ben_reinf import TCrReinf
 from char_geom import CharGeom
@@ -25,8 +27,8 @@ class GeneralAxBend(TCrReinf):
     _R = 20  # curve parameter (FOR BOTH B500SP AND BST500S STEEL ?)
     E_STELL = 200 * 10 ** 3  # acc. to [2]
     EPS_INIT = 0.001 * 10 ** -3
-    N_CONC_LAYERS = 10  # number of layers of virtual division of the concrete cross-section for the needs of numerical integrals
-    CONC_L_THIC = 0.1 # concrete layer thickness of virtual division of the concrete cross-section for the needs of numerical integrals
+    N_CONC_LAYERS = 30  # number of layers of virtual division of the concrete cross-section for the needs of numerical integrals
+    CONC_L_THIC = 0.05 # concrete layer thickness of virtual division of the concrete cross-section for the needs of numerical integrals
     
 
     def __init__(self, name, b, h, hsl, 
@@ -46,6 +48,26 @@ class GeneralAxBend(TCrReinf):
     def alter_constr(self):
         """alternative contructor with custom reinforcement heights"""
         pass
+    
+    @staticmethod
+    def trial_plot(input_list, second_input_list=None, title=None):
+        if second_input_list==None:
+            fig0, ax0 = plt.subplots()
+            # fig0.set_size_inches(9, 6)
+            plt.bar(input_list, [i for i in range(len(input_list))], width=0.01)
+        else:
+            # fig0, ax0 = plt.subplots()
+            # # fig0.set_size_inches(9, 6)
+            # ax0.barv(input_list, second_input_list, label='signal')
+            plt.bar(input_list, second_input_list, width=0.01)
+        # ax0.xaxis.grid(True, which='major')
+        # ax0.yaxis.grid(True, which='major')
+        # ax0.set_xlabel('Time [s]', fontsize=15)
+        # ax0.set_ylabel('Vertical displcement [mm]', fontsize=15)
+        # ax0.tick_params(labelsize=15)
+        plt.title(title)
+        plt.grid(True)
+        plt.show()
     
     @property
     def E_cm(self):
@@ -77,7 +99,7 @@ class GeneralAxBend(TCrReinf):
                 conc_lay_widths.append(self.b[1])
             else:
                 conc_lay_widths.append(self.b[2])
-            conc_lay_areas.append(conc_lay_heights[i] * conc_lay_widths[i])
+            conc_lay_areas.append(GeneralAxBend.CONC_L_THIC * conc_lay_widths[i])
         return n_layers, conc_lay_heights, conc_lay_widths, conc_lay_areas
     
     def _strains_in_conc(self, eps_cur=0.0, fi_cur=0.0):
@@ -140,7 +162,7 @@ class GeneralAxBend(TCrReinf):
         if abs(strain_steel) < GeneralAxBend.EYD:
             sigma_steel = GeneralAxBend.E_STELL * strain_steel
         elif abs(strain_steel) >= GeneralAxBend.EYD and abs(strain_steel) <= e_ud:
-            sigma_steel = f_yd
+            sigma_steel = math.copysign(f_yd, strain_steel)
         else:  # abs(strain_steel) > e_yd
             sigma_steel = strain_steel * (f_yd / e_ud)
         # WARINING: doubling of stresses in the reinforcement surrounded 
@@ -151,7 +173,7 @@ class GeneralAxBend(TCrReinf):
         """returns stresses in reinforcement layers"""
         strain_steel, r_heights, reinf_areas = self._strains_in_steel(eps_cur, fi_cur)
         stress_steel = [self._stress_strain_steel(el)[0] for el in strain_steel]
-        return stress_steel, r_heights, reinf_areas
+        return stress_steel, r_heights, reinf_areas, strain_steel
     
     def _relative_heights(self, heights):
         "returns heights relative to center of gravity"
@@ -174,7 +196,7 @@ class GeneralAxBend(TCrReinf):
         self._stress_in_conc(eps_cur, fi_cur)[2], \
         self._stress_in_conc(eps_cur, fi_cur)[4]
         
-        stress_in_steel, r_heights, steel_areas = self._stress_in_steel(eps_cur, fi_cur)
+        stress_in_steel, r_heights, steel_areas, strain_steel = self._stress_in_steel(eps_cur, fi_cur)
         # suma pole_plastra*naprezenieplastra
         # suma pole_warw_pretow*naprezenia_w_wawie-pretow
         forces_in_conc = [stress_in_conc[i] * conc_areas[i] \
@@ -188,8 +210,17 @@ class GeneralAxBend(TCrReinf):
         #     strain_steel[i] = ((self.e_vert - r_heights[-i+2]) * fi_cur) + eps_cur
         rel_heights = self._relative_heights(conc_lay_heights)
         bending_moment_conc = [forces_in_conc[i] * rel_heights[i] for i in range(len(forces_in_conc))]
-        #DOPISZ SIŁĘ OSIOWĄ !!
-        return axial_force, sum(bending_moment_conc)
+        r_rel_heights = self._relative_heights(r_heights)
+        bending_moment_steel = [forces_in_steel[i] * r_rel_heights[i] for i in range(len(forces_in_steel))]
+        return axial_force, \
+                sum(bending_moment_conc), \
+                sum(bending_moment_steel), \
+                strain_steel, \
+                stress_in_steel, \
+                forces_in_steel, r_rel_heights, \
+                stress_in_conc, \
+                forces_in_conc, rel_heights \
+                
 
     def _find_n_eps_m_eps_fi(self, eps_cur=0.0, fi_cur=0.0):
         """finds corresponding quantities of M N with regard to input
@@ -220,7 +251,7 @@ class GeneralAxBend(TCrReinf):
 
 def main():
     my_rc_cross_sec = GeneralAxBend(name='GENERAL_CROSS-SECT_no1',
-                                b=(1, 0.3, 1), # [m] width of the individual rectangles
+                                b=(1, 1, 1), # [m] width of the individual rectangles
                                 h=(0.3, 1, 0.3), # [m] height of the individual rectangles
                                 hsl=0.20, #[m] thickness of upper slab
                                 beff=1.2, #[m] effective width of upper slab
@@ -241,12 +272,21 @@ def main():
     # print(my_rc_cross_sec.h_top)
     # print(my_rc_cross_sec.E_cm)
     init_fi = my_rc_cross_sec._initial_rotation()
+    print(init_fi)
     # print(init_fi)
-    print('strain in steel', my_rc_cross_sec._strains_in_steel(eps_cur=0.000000, fi_cur=-init_fi)[0])
-    # # print(my_rc_cross_sec._conc_layers())
-    print('strain in conc',my_rc_cross_sec._strains_in_conc(eps_cur=0.000000, fi_cur=-init_fi)[0])
-    print('str in conc:', my_rc_cross_sec._stress_in_conc(eps_cur=0.000000, fi_cur=-init_fi)[0])
-    print('str in steel:', my_rc_cross_sec._stress_in_steel(eps_cur=0.000000, fi_cur=-init_fi)[0])
-    print('axial force:', my_rc_cross_sec._axial_force(eps_cur=0.000000, fi_cur=-init_fi))
+    # print('strain in steel', my_rc_cross_sec._strains_in_steel(eps_cur=0.000000, fi_cur=-init_fi)[0])
+    # # # print(my_rc_cross_sec._conc_layers())
+    # print('strain in conc',my_rc_cross_sec._strains_in_conc(eps_cur=0.000000, fi_cur=-init_fi)[0])
+    # print('str in conc:', my_rc_cross_sec._stress_in_conc(eps_cur=0.000000, fi_cur=-init_fi)[0])
+    # print('str in steel:', my_rc_cross_sec._stress_in_steel(eps_cur=0.000000, fi_cur=-init_fi)[0])
+    # print('axial force:', my_rc_cross_sec._axial_force(eps_cur=0.000000, fi_cur=-init_fi))
+    inter_forces_data = my_rc_cross_sec._axial_force(eps_cur=0.000000, fi_cur=2800*init_fi)
+    print(inter_forces_data[6], inter_forces_data[5])
+    GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[3], 'strains in steel')
+    GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[4], 'stress in steel')
+    GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[5], 'forces in steel')
+    GeneralAxBend.trial_plot(inter_forces_data[9], inter_forces_data[7], 'stress in concrete')
+    GeneralAxBend.trial_plot(inter_forces_data[9], inter_forces_data[8], 'forces in concrete')
 if __name__ == '__main__':
     main()
+# MASZ BŁĄD PRAWDOPODOBNIE W ODSZTAŁCENIACH STALI !!!!
