@@ -52,14 +52,14 @@ class RectCrSectDoubleR(RectCrSectSingle):
     
 def main():
     my_double_reinf_cross_sec = RectCrSectDoubleR(name='moj_przekr_prost',
-                                                  b=0.5,
-                                                  h=1.5,
+                                                  b=0.6,
+                                                  h=1,
                                                   cl_conc='C30_37',
-                                                  cl_steel='bst500s',
+                                                  cl_steel='b500sp',
                                                   c=30,
-                                                  fi=25,
+                                                  fi=20,
                                                   fi_s=12,
-                                                  fi_opp=25)
+                                                  fi_opp=20)
     results = my_double_reinf_cross_sec.compute_m_rd_double_r()
     print(f'ksi eff:  {results[1]}')
     print(f'max. load capasity bending moment:  {results[0]}')

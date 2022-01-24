@@ -68,17 +68,17 @@ class TCrReinf(RectCrReinf):
 
 def main():
     my_rc_cross_sec = TCrReinf(name='moj_przekr_T',
-                                b=0.26, # [m]
-                                h=0.464, # [m]
-                                hsl=0.12, #[m] thickness of upper slab
-                                beff=1.5, #[m] effective width of upper slab
+                                b=0.6, # [m]
+                                h=1.25, # [m]
+                                hsl=0.25, #[m] thickness of upper slab
+                                beff=2, #[m] effective width of upper slab
                                 cl_conc='C30_37',
                                 cl_steel='bst500s',
-                                c=40, # [mm]
+                                c=30, # [mm]
                                 fi=20, # [mm]
                                 fi_s=12, # [mm]
                                 fi_opp=20, # [mm]
-                                m_sd=407) # [kNm]
+                                m_sd=2000) # [kNm]
     res = my_rc_cross_sec.compute_reinf_T()
     print(f'bottom needs: {res[1]} x fi{my_rc_cross_sec.fi} >= {res[0]}')
     print(f'upper needs: {res[3]} x fi{my_rc_cross_sec.fi} >= {res[2]}')

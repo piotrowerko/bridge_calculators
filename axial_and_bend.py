@@ -30,7 +30,7 @@ class GeneralAxBend(TCrReinf):
     EPS_INIT = 0.001 * 10 ** -2
     N_CONC_LAYERS = 30  # number of layers of virtual division of the concrete cross-section for the needs of numerical integrals
     CONC_L_THIC = 0.005 # concrete layer thickness of virtual division of the concrete cross-section for the needs of numerical integrals
-    ETA = 0.00001 # learning rate
+    ETA = 0.9 # learning rate
 
     def __init__(self, name, b, h, hsl, 
                  beff, cl_conc, cl_steel, 
@@ -120,7 +120,7 @@ class GeneralAxBend(TCrReinf):
         """returns stress-strain relationsip in cocnrete"""
         f_cd = self._get_fcd_eta()
         if strain_conc >= GeneralAxBend.EC2 and strain_conc <= GeneralAxBend.ECU2:
-            sigma_conc = f_cd
+            sigma_conc = 6.67 * strain_conc + f_cd - 0.0133
         elif strain_conc < GeneralAxBend.EC2 and strain_conc >= 0:
             sigma_conc = f_cd * (1 - (1 - strain_conc / GeneralAxBend.EC2) ** 2)
         elif strain_conc < 0:
@@ -143,17 +143,18 @@ class GeneralAxBend(TCrReinf):
         n_of_layers = n_bott + n_upp
         reinf_heights = [(0.001 * layer_one + 0.002 * i * self.fi) for i in range(n_bott)] \
             + [(sum(self.h) - 0.001 * layer_one - 0.002 * i * self.fi) for i in range(n_upp - 1, -1, -1)]
+        r_rel_heights = self._relative_heights(reinf_heights)
         single_bar_area =  math.pi * ((0.001 * self.fi) ** 2) / 4
         reinf_areas = [rebar_numbers_bott[i] * single_bar_area for i in range(n_bott)] \
             + [rebar_numbers_upp[i] * single_bar_area for i in range(n_upp)]
-        return reinf_heights, reinf_areas, n_of_layers
+        return r_rel_heights, reinf_areas, n_of_layers
 
     def _strains_in_steel(self, eps_cur=0.0, fi_cur=0.0):
         """finds strain in steel layers basing on rotation and eps_linear"""
         r_heights, reinf_areas, n_of_layers = self._reinf_geom()
         strain_steel = [0] * n_of_layers
         for i in range(n_of_layers):
-            strain_steel[i] = ((r_heights[i]-self.e_vert) * fi_cur) + eps_cur
+            strain_steel[i] = (r_heights[i] * fi_cur) + eps_cur
         return strain_steel, r_heights, reinf_areas
 
     def _stress_strain_steel(self, strain_steel=0.0):
@@ -169,7 +170,11 @@ class GeneralAxBend(TCrReinf):
         if abs(strain_steel) < GeneralAxBend.EYD:
             sigma_steel = GeneralAxBend.E_STELL * strain_steel
         elif abs(strain_steel) >= GeneralAxBend.EYD and abs(strain_steel) <= e_ud:
-            sigma_steel = math.copysign(f_yd, strain_steel)
+            a = 1 / (e_ud - GeneralAxBend.EYD)
+            b = f_yd - a * GeneralAxBend.EYD
+            _sigma = a * abs(strain_steel) + b
+            #sigma_steel = math.copysign(f_yd, strain_steel)
+            sigma_steel = math.copysign(_sigma, strain_steel)
         else:  # abs(strain_steel) > e_yd
             sigma_steel = strain_steel * (f_yd / e_ud)
         # WARINING: doubling of stresses in the reinforcement surrounded 
@@ -245,18 +250,18 @@ class GeneralAxBend(TCrReinf):
         np_r_array = np.zeros(shape=(2))
         np_r_array[0] = n_user - n_cur
         np_r_array[1] = m_user - m_cur
-        return  np_l_array, np_r_array
+        return  np_l_array, np_r_array, eps_init, fi_init
 
     def _update_eps_and_fi(self, eps_cur=0, fi_cur=0, n_cur=0, m_cur=0):
         n_user = self.n_sd
         m_user = self.m_sd
-        np_l_array, np_r_array = self._get_eq_coeff_array(eps_cur, fi_cur, n_cur, m_cur, n_user, m_user)
+        np_l_array, np_r_array, eps_init, fi_init = self._get_eq_coeff_array(eps_cur, fi_cur, n_cur, m_cur, n_user, m_user)
         le_lfi = self.ETA * self._solve_two_eq(np_l_array, np_r_array)
         # le_lfi = self._solve_two_eq(np_l_array, np_r_array)
         # eps_new = eps_cur + math.copysign(GeneralAxBend.EPS_INIT, le_lfi[0])
         # fi_new = fi_cur + math.copysign(self.fi_init, le_lfi[1])
-        eps_new = eps_cur + le_lfi[0]
-        fi_new = fi_cur + le_lfi[1]
+        eps_new = eps_cur + le_lfi[0] * eps_init
+        fi_new = fi_cur + le_lfi[1] * fi_init 
         _c =  self._internal_forces(eps_new, fi_new)
         n_new, m_new = _c[0], _c[-1]
         return eps_new, fi_new, n_new, m_new
@@ -271,54 +276,50 @@ class GeneralAxBend(TCrReinf):
         m_new = 0
         for i in range(n_it):
             eps_new, fi_new, n_new, m_new = self._update_eps_and_fi(eps_cur=eps_new, fi_cur=fi_new, n_cur=n_new, m_cur=m_new)
-            print(n_new, m_new)
+            print(n_new, m_new, i, eps_new, fi_new)
+            # if abs(eps_new) > 0.1 or abs(fi_new) > 0.1:
+            #     eps_new = np.random.uniform(-0.001, 0.001)
+            #     fi_new = np.random.uniform(-0.001, 0.001)
+            check1 = abs(abs(n_new) - abs(self.n_sd)) / (abs(self.n_sd) + 0.005)
+            check2 = abs(abs(m_new) - abs(self.m_sd)) / (abs(self.m_sd) + 0.005)
+            if check1 < 0.01 and check2 < 0.01:
+                break
         return eps_new, fi_new, n_new, m_new
-        
 
 def main():
     my_rc_cross_sec = GeneralAxBend(name='GENERAL_CROSS-SECT_no1',
-                                b=(1, 1, 1), # [m] width of the individual rectangles
-                                h=(0.3, 1, 0.3), # [m] height of the individual rectangles
+                                b=(0, 0.6, 0), # [m] width of the individual rectangles
+                                h=(0, 1, 0), # [m] height of the individual rectangles
                                 hsl=0.20, #[m] thickness of upper slab
                                 beff=1.2, #[m] effective width of upper slab
                                 cl_conc='C30_37',
                                 cl_steel='b500sp',
                                 c=30, # [mm]
-                                fi=25, # [mm]
+                                fi=20, # [mm]
                                 fi_s=12, # [mm]
-                                fi_opp=25, # [mm]
-                                nl_reinf_top=(3, (5, 5, 5)), # [mm] denotes number of layers of top reinforcement and corresponding numbers of rebars
-                                nl_reinf_bottom=(3, (5, 5 , 5)), # [mm] denotes number of layers of bottom reinforcement and corresponding numbers of rebars
-                                m_sd=3, # [MNm]
-                                n_sd=5) # [MN]
-    # print(my_rc_cross_sec._stress_strain_conc(strain_conc=0.0040))
-    # print(my_rc_cross_sec._stress_strain_steel(0.07))
-    # print(my_rc_cross_sec.e_vert)
-    # print(my_rc_cross_sec._reinf_geom())
-    # print(my_rc_cross_sec.h_top)
-    # print(my_rc_cross_sec.E_cm)
-    #init_fi = my_rc_cross_sec._initial_rotation()
-    # print(init_fi)
-    # print(init_fi)
-    # print('strain in steel', my_rc_cross_sec._strains_in_steel(eps_cur=0.000000, fi_cur=-init_fi)[0])
-    # # # print(my_rc_cross_sec._conc_layers())
-    # print('strain in conc',my_rc_cross_sec._strains_in_conc(eps_cur=0.000000, fi_cur=-init_fi)[0])
-    # print('str in conc:', my_rc_cross_sec._stress_in_conc(eps_cur=0.000000, fi_cur=-init_fi)[0])
-    # print('str in steel:', my_rc_cross_sec._stress_in_steel(eps_cur=0.000000, fi_cur=-init_fi)[0])
-    # print('axial force:', my_rc_cross_sec._axial_force(eps_cur=0.000000, fi_cur=-init_fi))
-    #inter_forces_data = my_rc_cross_sec._internal_forces(eps_cur=0.001 * 10 ** -3, fi_cur=0*init_fi)
-    # inter_forces_data = my_rc_cross_sec._internal_forces(eps_cur=0, fi_cur=1*init_fi)
-    # inter_forces_data2 = my_rc_cross_sec._get_n1_and_m1()
-    inter_forces_data5 = my_rc_cross_sec.find_optimal_eps_fi(5)
-    # GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[3], 'strains in steel')
-    # GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[4], 'stress in steel')
-    # GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[5], 'forces in steel')
-    # GeneralAxBend.trial_plot(inter_forces_data[10], inter_forces_data[7], 'strains in concrete')
-    # GeneralAxBend.trial_plot(inter_forces_data[10], inter_forces_data[8], 'stress in concrete')
-    # GeneralAxBend.trial_plot(inter_forces_data[10], inter_forces_data[9], 'forces in concrete')
-    # print('pure in forces:', inter_forces_data[0], inter_forces_data[-1])
-    # print(inter_forces_data2)
-    print(inter_forces_data5)
+                                fi_opp=20, # [mm]
+                                nl_reinf_top=(1, (5, 0, 0)), # [mm] denotes number of layers of top reinforcement and corresponding numbers of rebars
+                                nl_reinf_bottom=(1, (5, 0 , 0)), # [mm] denotes number of layers of bottom reinforcement and corresponding numbers of rebars
+                                m_sd=0.55, # [MNm]
+                                n_sd=0) # [MN]
+
+    inter_forces_data1 = my_rc_cross_sec.find_optimal_eps_fi(30)
+    eps_cur, fi_cur = inter_forces_data1[0], inter_forces_data1[1]
+    # inter_forces_data = my_rc_cross_sec._internal_forces(eps_cur=-0.13863684678772847, fi_cur=0.16516223687652937)
+    inter_forces_data = my_rc_cross_sec._internal_forces(eps_cur, fi_cur)
+    
+    GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[3], 'strains in steel')
+    GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[4], 'stress in steel')
+    GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[5], 'forces in steel')
+    GeneralAxBend.trial_plot(inter_forces_data[10], inter_forces_data[7], 'strains in concrete')
+    GeneralAxBend.trial_plot(inter_forces_data[10], inter_forces_data[8], 'stress in concrete')
+    GeneralAxBend.trial_plot(inter_forces_data[10], inter_forces_data[9], 'forces in concrete')
+    print('pure in forces:', inter_forces_data[0], inter_forces_data[-1])
+    # inter_forces_data1 = my_rc_cross_sec._update_eps_and_fi(eps_cur=-0.13863684678772847, fi_cur=0.16516223687652937, n_cur=-4.282748843304599, m_cur=1.918676231783936)
+    # print('pure in forces:', inter_forces_data1)
     
 if __name__ == '__main__':
     main()
+
+
+# ROZWAŻ NACHYLENIE PŁASKICH PÓŁEK !!!

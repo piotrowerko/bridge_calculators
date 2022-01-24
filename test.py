@@ -35,4 +35,4 @@ print(B)
  [0.00235162 0.00806786]]
 [ 2. 11.]
 
-math.copysign(GeneralAxBend.EPS_INIT, _c[0])
+#math.copysign(GeneralAxBend.EPS_INIT, _c[0])
