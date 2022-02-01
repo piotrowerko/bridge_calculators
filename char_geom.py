@@ -23,7 +23,7 @@ class CharGeom():
 
 def main():
     moje_cw = CharGeom()
-    a = (0.26, 0.34, 0.70, 0.3, 1.66, 0.10)
+    a = (2, 0.3, 0.70, 0.3, 0, 0)
     res = moje_cw.find_center_m(a)
     print(f'pole: {res[1]}; pole razem: {res[2]}; środek ciężkości: {res[0]}')
     #print(sum(moje_cw.mom_of_int_sin(a)))

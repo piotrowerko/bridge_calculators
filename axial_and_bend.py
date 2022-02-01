@@ -40,7 +40,7 @@ class GeneralAxBend(TCrReinf):
         super().__init__(name, b, h, hsl, beff, cl_conc, cl_steel, c, fi, fi_s, fi_opp, m_sd)
         self.n_sd = n_sd
         char_geom = CharGeom()
-        self.e_vert = char_geom.find_center_m((b[0], h[0], b[1], h[1], b[2], h[2]))[0]  # = sefl.h_bottom
+        self.e_vert = char_geom.find_center_m((b[2], h[2], b[1], h[1], b[0], h[0]))[0]  # = sefl.h_bottom
         self.h_top = sum(self.h) - self.e_vert
         self.nl_reinf_top = nl_reinf_top
         self.nl_reinf_bottom = nl_reinf_bottom
@@ -138,15 +138,17 @@ class GeneralAxBend(TCrReinf):
     def _reinf_geom(self):
         """returns reinforcement geometrical deatials"""
         layer_one = self.c + self.fi_s + self.fi * 0.5
+        layer_one_opp = self.c + self.fi_s + self.fi_opp * 0.5
         n_bott, rebar_numbers_bott = self.nl_reinf_bottom
         n_upp, rebar_numbers_upp = self.nl_reinf_top
         n_of_layers = n_bott + n_upp
         reinf_heights = [(0.001 * layer_one + 0.002 * i * self.fi) for i in range(n_bott)] \
-            + [(sum(self.h) - 0.001 * layer_one - 0.002 * i * self.fi) for i in range(n_upp - 1, -1, -1)]
+            + [(sum(self.h) - 0.001 * layer_one_opp - 0.002 * i * self.fi_opp) for i in range(n_upp - 1, -1, -1)]
         r_rel_heights = self._relative_heights(reinf_heights)
-        single_bar_area =  math.pi * ((0.001 * self.fi) ** 2) / 4
-        reinf_areas = [rebar_numbers_bott[i] * single_bar_area for i in range(n_bott)] \
-            + [rebar_numbers_upp[i] * single_bar_area for i in range(n_upp)]
+        single_bar_area_bot =  math.pi * ((0.001 * self.fi) ** 2) / 4
+        single_bar_area_upp =  math.pi * ((0.001 * self.fi_opp) ** 2) / 4
+        reinf_areas = [rebar_numbers_bott[i] * single_bar_area_bot for i in range(n_bott)] \
+            + [rebar_numbers_upp[i] * single_bar_area_upp for i in range(n_upp)]
         return r_rel_heights, reinf_areas, n_of_layers
 
     def _strains_in_steel(self, eps_cur=0.0, fi_cur=0.0):
@@ -240,7 +242,8 @@ class GeneralAxBend(TCrReinf):
         n_m_eps_fi_cur_plus_dfi =  self._internal_forces(eps_cur, fi_cur + fi_init)[0], \
             self._internal_forces(eps_cur, fi_cur + fi_init)[-1]
         np_two = np.asanyarray(n_m_eps_fi_cur_plus_dfi)
-        n_m_cur = self._internal_forces(eps_cur, fi_cur)[0], self._internal_forces(eps_cur, fi_cur)[-1]
+        _n_m_cur = self._internal_forces(eps_cur, fi_cur)
+        n_m_cur = _n_m_cur[0], _n_m_cur[-1]
         np_three = np.asanyarray(n_m_cur)
         np_l_array = np.zeros(shape=(2,2))
         np_l_array[0][0] = np_one[0] - np_three[0]
@@ -288,25 +291,41 @@ class GeneralAxBend(TCrReinf):
 
 def main():
     my_rc_cross_sec = GeneralAxBend(name='GENERAL_CROSS-SECT_no1',
-                                b=(0, 0.6, 0), # [m] width of the individual rectangles
-                                h=(0, 1, 0), # [m] height of the individual rectangles
+                                b=(0, 1.0, 0), # [m] width of the individual rectangles
+                                h=(0.0, 1.5, 0.0), # [m] height of the individual rectangles
                                 hsl=0.20, #[m] thickness of upper slab
                                 beff=1.2, #[m] effective width of upper slab
                                 cl_conc='C30_37',
                                 cl_steel='b500sp',
-                                c=30, # [mm]
-                                fi=20, # [mm]
+                                c=25, # [mm]
+                                fi=32, # [mm]
                                 fi_s=12, # [mm]
-                                fi_opp=20, # [mm]
-                                nl_reinf_top=(1, (5, 0, 0)), # [mm] denotes number of layers of top reinforcement and corresponding numbers of rebars
-                                nl_reinf_bottom=(1, (5, 0 , 0)), # [mm] denotes number of layers of bottom reinforcement and corresponding numbers of rebars
-                                m_sd=0.55, # [MNm]
-                                n_sd=0) # [MN]
+                                fi_opp=12, # [mm]
+                                nl_reinf_top=(1, (8, 0, 0)), # [mm] denotes number of layers of top reinforcement and corresponding numbers of rebars
+                                nl_reinf_bottom=(1, (8, 0 , 0)), # [mm] denotes number of layers of bottom reinforcement and corresponding numbers of rebars
+                                m_sd=5, # [MNm]
+                                n_sd=2.5) # [MN]
+    
+    my_rc_cross_sec2 = GeneralAxBend(name='GENERAL_CROSS-SECT_no2',
+                                b=(2.5, 1.0, 0), # [m] width of the individual rectangles
+                                h=(0.3, 1.85, 0.0), # [m] height of the individual rectangles
+                                hsl=0.20, #[m] thickness of upper slab
+                                beff=1.2, #[m] effective width of upper slab
+                                cl_conc='C30_37',
+                                cl_steel='b500sp',
+                                c=25, # [mm]
+                                fi=32, # [mm]
+                                fi_s=12, # [mm]
+                                fi_opp=12, # [mm]
+                                nl_reinf_top=(1, (25, 0, 0)), # [mm] denotes number of layers of top reinforcement and corresponding numbers of rebars
+                                nl_reinf_bottom=(1, (8, 0 , 0)), # [mm] denotes number of layers of bottom reinforcement and corresponding numbers of rebars
+                                m_sd=3, # [MNm]
+                                n_sd=-3) # [MN]
 
-    inter_forces_data1 = my_rc_cross_sec.find_optimal_eps_fi(30)
+    inter_forces_data1 = my_rc_cross_sec2.find_optimal_eps_fi(30)
     eps_cur, fi_cur = inter_forces_data1[0], inter_forces_data1[1]
     # inter_forces_data = my_rc_cross_sec._internal_forces(eps_cur=-0.13863684678772847, fi_cur=0.16516223687652937)
-    inter_forces_data = my_rc_cross_sec._internal_forces(eps_cur, fi_cur)
+    inter_forces_data = my_rc_cross_sec2._internal_forces(eps_cur, fi_cur)
     
     GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[3], 'strains in steel')
     GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[4], 'stress in steel')
@@ -317,6 +336,9 @@ def main():
     print('pure in forces:', inter_forces_data[0], inter_forces_data[-1])
     # inter_forces_data1 = my_rc_cross_sec._update_eps_and_fi(eps_cur=-0.13863684678772847, fi_cur=0.16516223687652937, n_cur=-4.282748843304599, m_cur=1.918676231783936)
     # print('pure in forces:', inter_forces_data1)
+    print(my_rc_cross_sec2.h_top)
+    print(sum(my_rc_cross_sec2.h))
+    print(my_rc_cross_sec2.e_vert)
     
 if __name__ == '__main__':
     main()
