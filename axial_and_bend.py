@@ -306,6 +306,22 @@ def main():
                                 m_sd=5, # [MNm]
                                 n_sd=2.5) # [MN]
     
+    my_rc_cross_sec1a = GeneralAxBend(name='GENERAL_CROSS-SECT_no1a',  # sprawdzenie na prostokącie symetrii odpowiedzi w przekroju symetrycznym
+                                b=(0, 1.0, 0), # [m] width of the individual rectangles
+                                h=(0.0, 1.5, 0.0), # [m] height of the individual rectangles
+                                hsl=0.20, #[m] thickness of upper slab
+                                beff=1.2, #[m] effective width of upper slab
+                                cl_conc='C30_37',
+                                cl_steel='b500sp',
+                                c=25, # [mm]
+                                fi=32, # [mm]
+                                fi_s=12, # [mm]
+                                fi_opp=32, # [mm]
+                                nl_reinf_top=(1, (10, 0, 0)), # [mm] denotes number of layers of top reinforcement and corresponding numbers of rebars
+                                nl_reinf_bottom=(1, (10, 0 , 0)), # [mm] denotes number of layers of bottom reinforcement and corresponding numbers of rebars
+                                m_sd=-3, # [MNm]
+                                n_sd=-0.5) # [MN]
+    
     my_rc_cross_sec2 = GeneralAxBend(name='GENERAL_CROSS-SECT_no2',
                                 b=(2.5, 1.0, 0), # [m] width of the individual rectangles
                                 h=(0.3, 1.85, 0.0), # [m] height of the individual rectangles
@@ -316,16 +332,32 @@ def main():
                                 c=25, # [mm]
                                 fi=32, # [mm]
                                 fi_s=12, # [mm]
-                                fi_opp=12, # [mm]
+                                fi_opp=20, # [mm]
                                 nl_reinf_top=(1, (25, 0, 0)), # [mm] denotes number of layers of top reinforcement and corresponding numbers of rebars
                                 nl_reinf_bottom=(1, (8, 0 , 0)), # [mm] denotes number of layers of bottom reinforcement and corresponding numbers of rebars
-                                m_sd=3, # [MNm]
-                                n_sd=-3) # [MN]
+                                m_sd=-5, # [MNm]
+                                n_sd=-1) # [MN]
+    
+    my_rc_cross_sec3 = GeneralAxBend(name='GENERAL_CROSS-SECT_no2',
+                                b=(1.2, 0.6, 1.2), # [m] width of the individual rectangles
+                                h=(0.25, 1.00, 0.4), # [m] height of the individual rectangles
+                                hsl=0.20, #[m] thickness of upper slab
+                                beff=1.2, #[m] effective width of upper slab
+                                cl_conc='C30_37',
+                                cl_steel='b500sp',
+                                c=25, # [mm]
+                                fi=20, # [mm]
+                                fi_s=12, # [mm]
+                                fi_opp=32, # [mm]
+                                nl_reinf_top=(1, (12, 0, 0)), # [mm] denotes number of layers of top reinforcement and corresponding numbers of rebars
+                                nl_reinf_bottom=(1, (8, 0 , 0)), # [mm] denotes number of layers of bottom reinforcement and corresponding numbers of rebars
+                                m_sd=-5, # [MNm]
+                                n_sd=-1) # [MN]
 
-    inter_forces_data1 = my_rc_cross_sec2.find_optimal_eps_fi(30)
+    inter_forces_data1 = my_rc_cross_sec1a.find_optimal_eps_fi(30)
     eps_cur, fi_cur = inter_forces_data1[0], inter_forces_data1[1]
     # inter_forces_data = my_rc_cross_sec._internal_forces(eps_cur=-0.13863684678772847, fi_cur=0.16516223687652937)
-    inter_forces_data = my_rc_cross_sec2._internal_forces(eps_cur, fi_cur)
+    inter_forces_data = my_rc_cross_sec1a._internal_forces(eps_cur, fi_cur)
     
     GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[3], 'strains in steel')
     GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[4], 'stress in steel')
@@ -336,9 +368,6 @@ def main():
     print('pure in forces:', inter_forces_data[0], inter_forces_data[-1])
     # inter_forces_data1 = my_rc_cross_sec._update_eps_and_fi(eps_cur=-0.13863684678772847, fi_cur=0.16516223687652937, n_cur=-4.282748843304599, m_cur=1.918676231783936)
     # print('pure in forces:', inter_forces_data1)
-    print(my_rc_cross_sec2.h_top)
-    print(sum(my_rc_cross_sec2.h))
-    print(my_rc_cross_sec2.e_vert)
     
 if __name__ == '__main__':
     main()
