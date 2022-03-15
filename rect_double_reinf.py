@@ -7,7 +7,7 @@ from rect_single_reinf import RectCrSectSingle
 
 class RectCrSectDoubleR(RectCrSectSingle):
     def __init__(self, name, b, h, cl_conc, cl_steel, c, fi, fi_s, fi_opp):
-        super().__init__(name, b, h, cl_conc, cl_steel, c, fi, fi_s)
+        super().__init__(name, b, h, cl_conc, cl_steel, c, fi, 0, fi_s)
         self.fi_opp = fi_opp  # diameter of second package of reinforcement
         
     def _compute_a2(self):

@@ -40,7 +40,8 @@ class GeneralAxBend(TCrReinf):
         super().__init__(name, b, h, hsl, beff, cl_conc, cl_steel, c, fi, fi_s, fi_opp, m_sd)
         self.n_sd = n_sd
         char_geom = CharGeom()
-        self.e_vert = char_geom.find_center_m((b[2], h[2], b[1], h[1], b[0], h[0]))[0]  # = sefl.h_bottom
+        #self.e_vert = char_geom.find_center_m((b[2], h[2], b[1], h[1], b[0], h[0]))[0]  # = sefl.h_bottom
+        self.e_vert = char_geom.find_center_m((b[0], h[0], b[1], h[1], b[2], h[2]))[0]  # = sefl.h_bottom
         self.h_top = sum(self.h) - self.e_vert
         self.nl_reinf_top = nl_reinf_top
         self.nl_reinf_bottom = nl_reinf_bottom
@@ -291,7 +292,7 @@ class GeneralAxBend(TCrReinf):
 
 def main():
     my_rc_cross_sec = GeneralAxBend(name='GENERAL_CROSS-SECT_no1',
-                                b=(0, 1.0, 0), # [m] width of the individual rectangles
+                                b=(0, 1.0, 0), # [m] width of the individual rectangles, b[0] and h[0] are the bottom plate
                                 h=(0.0, 1.5, 0.0), # [m] height of the individual rectangles
                                 hsl=0.20, #[m] thickness of upper slab
                                 beff=1.2, #[m] effective width of upper slab
@@ -323,8 +324,8 @@ def main():
                                 n_sd=-0.5) # [MN]
     
     my_rc_cross_sec2 = GeneralAxBend(name='GENERAL_CROSS-SECT_no2',
-                                b=(2.5, 1.0, 0), # [m] width of the individual rectangles
-                                h=(0.3, 1.85, 0.0), # [m] height of the individual rectangles
+                                b=(0, 1.0, 2.5), # [m] width of the individual rectangles
+                                h=(0, 1.85, 0.3), # [m] height of the individual rectangles
                                 hsl=0.20, #[m] thickness of upper slab
                                 beff=1.2, #[m] effective width of upper slab
                                 cl_conc='C30_37',
@@ -332,15 +333,15 @@ def main():
                                 c=25, # [mm]
                                 fi=32, # [mm]
                                 fi_s=12, # [mm]
-                                fi_opp=20, # [mm]
+                                fi_opp=12, # [mm]
                                 nl_reinf_top=(1, (25, 0, 0)), # [mm] denotes number of layers of top reinforcement and corresponding numbers of rebars
                                 nl_reinf_bottom=(1, (8, 0 , 0)), # [mm] denotes number of layers of bottom reinforcement and corresponding numbers of rebars
-                                m_sd=-5, # [MNm]
-                                n_sd=-1) # [MN]
+                                m_sd=3, # [MNm]
+                                n_sd=-3) # [MN]
     
     my_rc_cross_sec3 = GeneralAxBend(name='GENERAL_CROSS-SECT_no2',
                                 b=(1.2, 0.6, 1.2), # [m] width of the individual rectangles
-                                h=(0.25, 1.00, 0.4), # [m] height of the individual rectangles
+                                h=(0.4, 1.00, 0.25), # [m] height of the individual rectangles
                                 hsl=0.20, #[m] thickness of upper slab
                                 beff=1.2, #[m] effective width of upper slab
                                 cl_conc='C30_37',
@@ -354,10 +355,10 @@ def main():
                                 m_sd=-5, # [MNm]
                                 n_sd=-1) # [MN]
 
-    inter_forces_data1 = my_rc_cross_sec1a.find_optimal_eps_fi(30)
+    inter_forces_data1 = my_rc_cross_sec3.find_optimal_eps_fi(30)
     eps_cur, fi_cur = inter_forces_data1[0], inter_forces_data1[1]
     # inter_forces_data = my_rc_cross_sec._internal_forces(eps_cur=-0.13863684678772847, fi_cur=0.16516223687652937)
-    inter_forces_data = my_rc_cross_sec1a._internal_forces(eps_cur, fi_cur)
+    inter_forces_data = my_rc_cross_sec3._internal_forces(eps_cur, fi_cur)
     
     GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[3], 'strains in steel')
     GeneralAxBend.trial_plot(inter_forces_data[6], inter_forces_data[4], 'stress in steel')

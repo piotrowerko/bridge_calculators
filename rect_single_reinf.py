@@ -6,7 +6,7 @@ from mat_rein_steel import ReinSteel
 class RectCrSectSingle():
     """bending of rectangular cross section with singular reinforcement:
     evaluation of bending moment capasity [kNm]"""
-    def __init__(self, name, b, h, cl_conc, cl_steel, c, fi, fi_s):  
+    def __init__(self, name, b, h, cl_conc, cl_steel, c, fi, no_of_bars, fi_s):  
         self.name = name
         self.b = b  # cross section width
         self.h = h  # cross section height
@@ -14,6 +14,7 @@ class RectCrSectSingle():
         self.cl_steel_data = ReinSteel.REIN_STEEL_DATA[cl_steel]
         self.c = c
         self.fi = fi
+        self.no_of_bars = no_of_bars
         self.fi_s = fi_s  # stirrup diameter 
 
     def __str__(self):
@@ -49,7 +50,8 @@ class RectCrSectSingle():
     
     def _compute_a_s1(self):
         """return an area of e.g. bottom reinforcement"""
-        num_of_reb = float(input('input num of bootom rebars: ').strip())  #.split()
+        #num_of_reb = float(input('input num of bootom rebars: ').strip())  #.split()
+        num_of_reb = self.no_of_bars
         return math.pi * (self.fi / 1000) ** 2 / 4 * num_of_reb
     
     def _compute_ksi_eff_single_r(self):
@@ -58,21 +60,22 @@ class RectCrSectSingle():
         f_cd = self._get_fcd_eta()
         nominator = a_s1 * f_yd
         denominator = self.b * self._compute_d() * f_cd
-        return nominator / denominator
+        ksi_eff = nominator / denominator
+        x_eff = ksi_eff * self._compute_d()
+        return ksi_eff, x_eff 
     
     def compute_m_rd_single_r(self):
-        ksi_eff = self._compute_ksi_eff_single_r()
+        ksi_eff, x_eff = self._compute_ksi_eff_single_r()
         d = self._compute_d()
         f_cd = self._get_fcd_eta()
         if ksi_eff <= self.cl_steel_data[3]:  # ksi_eff_lim assuming LAMBDA = 0.8 and EPSILON CU = 3.5 * (10 ** -3)
             print("reinforcement is fully used; sigma_s = f_yd")
             m_rd = 1000 * ksi_eff * (1 - 0.5 * ksi_eff) * d ** 2 * self.b * f_cd
-            return m_rd, ksi_eff
         else:
             print("reinforcement is NOT fully used; sigma_s < f_yd")
             ksi_eff = self.cl_steel_data[3]  # = ksi_eff_lim
             m_rd = 1000 * ksi_eff * (1 - 0.5 * ksi_eff) * d ** 2 * self.b * f_cd
-            return m_rd, ksi_eff
+        return m_rd, ksi_eff, x_eff
         
     
 def main():
@@ -83,9 +86,11 @@ def main():
                                    cl_steel='bst500s',
                                    c=30,
                                    fi=25,
+                                   no_of_bars=8,
                                    fi_s=12)
     results = moj_przekr_prost.compute_m_rd_single_r()
     print(f'ksi eff:  {results[1]}')
+    print(f'x eff:  {results[2]}')
     print(f'max. load capasity bending moment:  {results[0]}')
 
 if __name__ == '__main__':
